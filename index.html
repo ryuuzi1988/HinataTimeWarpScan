@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+  <meta charset="UTF-8">
+  <title>Time Warp Scan</title>
+  <style>
+    body {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      background: #222;
+      color: #fff;
+      font-family: sans-serif;
+      margin: 0;
+      padding: 20px;
+    }
+
+    video {
+      display: none;
+    }
+
+    canvas {
+      border: 2px solid #555;
+      max-width: 90vw;
+      background: #000;
+    }
+
+    .controls {
+      margin: 10px 0;
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      justify-content: center;
+      align-items: center;
+    }
+
+    button {
+      padding: 10px 16px;
+      font-size: 16px;
+      cursor: pointer;
+      border-radius: 6px;
+      border: none;
+      background: #00e5ff;
+      color: #000;
+      font-weight: bold;
+    }
+
+    button:active {
+      opacity: 0.8;
+    }
+
+    .slider-container {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    /* アルバム（ダイアログ）のスタイル */
+    dialog.album-modal {
+      width: 90vw;
+      max-width: 640px;
+      max-height: 80vh;
+      background: #222;
+      color: #fff;
+      border: 2px solid #555;
+      border-radius: 8px;
+      padding: 20px;
+      overflow-y: auto;
+    }
+
+    dialog::backdrop {
+      background: rgba(0, 0, 0, 0.8);
+    }
+
+    .album-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+      border-bottom: 1px solid #444;
+      padding-bottom: 10px;
+    }
+
+    .album-title {
+      font-size: 18px;
+      margin: 0;
+    }
+
+    .close-btn {
+      background: #ff4444;
+      color: #fff;
+    }
+
+    .album-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+      gap: 10px;
+    }
+
+    .album-item {
+      position: relative;
+      border-radius: 4px;
+      overflow: hidden;
+      border: 1px solid #555;
+      background: #111;
+      aspect-ratio: 4 / 3;
+    }
+
+    .album-item img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+      cursor: pointer;
+    }
+  </style>
+</head>
+
+<body>
+  <h2>ひなた せんよう エフェクト</h2>
+
+  <div class="controls slider-container">
+    <label for="speedSlider">はやさ:</label>
+    <input type="range" id="speedSlider" min="1" max="10" value="3">
+    <span id="speedValue">3</span>
+  </div>
+
+  <div class="controls">
+    <button id="startHorizontalBtn">よこにスキャン</button>
+    <button id="startVerticalBtn">たてにスキャン</button>
+    <button id="saveBtn">ほぞん</button>
+    <button id="openAlbumBtn">アルバム</button>
+  </div>
+
+  <video id="video" playsinline autoplay></video>
+  <canvas id="canvas" width="640" height="480"></canvas>
+
+  <!-- アルバム表示用ダイアログ -->
+  <dialog id="albumModal" class="album-modal">
+    <div class="album-header">
+      <div class="album-title">ほぞんしたアルバム</div>
+      <button id="closeAlbumBtn" class="close-btn">閉じる</button>
+    </div>
+    <div class="album-grid" id="albumGrid"></div>
+  </dialog>
+
+  <script>
+    const video = document.getElementById('video');
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+
+    const startHBtn = document.getElementById('startHorizontalBtn');
+    const startVBtn = document.getElementById('startVerticalBtn');
+    const saveBtn = document.getElementById('saveBtn');
+    const openAlbumBtn = document.getElementById('openAlbumBtn');
+    const closeAlbumBtn = document.getElementById('closeAlbumBtn');
+
+    const speedSlider = document.getElementById('speedSlider');
+    const speedValue = document.getElementById('speedValue');
+
+    const albumModal = document.getElementById('albumModal');
+    const albumGrid = document.getElementById('albumGrid');
+
+    let scanPos = 0;
+    let isScanning = false;
+    let scanDirection = 'horizontal';
+    let speed = parseInt(speedSlider.value, 10);
+
+    // カメラ起動
+    navigator.mediaDevices.getUserMedia({
+      video: {
+        facingMode: "user", // インカメラを優先（外カメラにしたい場合は "environment"）
+        width: { ideal: 640 },
+        height: { ideal: 480 }
+      },
+      audio: false
+    })
+      .then(stream => { video.srcObject = stream; })
+      .catch(err => {
+        // エラーの詳細を表示するように変更
+        alert("カメラの起動に失敗しました。\n理由: " + err.name + "\nメッセージ: " + err.message);
+      });
+
+    speedSlider.addEventListener('input', (e) => {
+      speed = parseInt(e.target.value, 10);
+      speedValue.textContent = speed;
+    });
+
+    startHBtn.addEventListener('click', () => {
+      scanDirection = 'horizontal';
+      scanPos = 0;
+      isScanning = true;
+    });
+
+    startVBtn.addEventListener('click', () => {
+      scanDirection = 'vertical';
+      scanPos = 0;
+      isScanning = true;
+    });
+
+    // JPEG保存 ＆ アルバム追加
+    saveBtn.addEventListener('click', () => {
+      const jpegDataUrl = canvas.toDataURL('image/jpeg', 0.9);
+      const filename = `timewarp_${Date.now()}.jpg`;
+
+      const link = document.createElement('a');
+      link.download = filename;
+      link.href = jpegDataUrl;
+      link.click();
+
+      addPhotoToAlbum(jpegDataUrl, filename);
+    });
+
+    // アルバムの開閉
+    openAlbumBtn.addEventListener('click', () => {
+      albumModal.showModal();
+    });
+
+    closeAlbumBtn.addEventListener('click', () => {
+      albumModal.close();
+    });
+
+    function addPhotoToAlbum(dataUrl, filename) {
+      const item = document.createElement('div');
+      item.className = 'album-item';
+
+      const img = document.createElement('img');
+      img.src = dataUrl;
+      img.title = 'クリックして再ダウンロード';
+
+      img.addEventListener('click', () => {
+        const link = document.createElement('a');
+        link.download = filename;
+        link.href = dataUrl;
+        link.click();
+      });
+
+      albumGrid.insertBefore(item, albumGrid.firstChild);
+      item.appendChild(img);
+    }
+
+    function draw() {
+      if (video.readyState === video.HAVE_ENOUGH_DATA) {
+        if (isScanning) {
+          if (scanDirection === 'horizontal') {
+            ctx.drawImage(video, scanPos, 0, speed, canvas.height, scanPos, 0, speed, canvas.height);
+
+            const nextPos = scanPos + speed;
+            const remaining = canvas.width - nextPos;
+
+            if (remaining > 0) {
+              ctx.drawImage(video, nextPos, 0, remaining, canvas.height, nextPos, 0, remaining, canvas.height);
+            }
+
+            if (nextPos < canvas.width) {
+              ctx.fillStyle = '#00e5ff';
+              ctx.fillRect(nextPos, 0, 3, canvas.height);
+              scanPos = nextPos;
+            } else {
+              isScanning = false;
+            }
+          } else {
+            ctx.drawImage(video, 0, scanPos, canvas.width, speed, 0, scanPos, canvas.width, speed);
+
+            const nextPos = scanPos + speed;
+            const remaining = canvas.height - nextPos;
+
+            if (remaining > 0) {
+              ctx.drawImage(video, 0, nextPos, canvas.width, remaining, 0, nextPos, canvas.width, remaining);
+            }
+
+            if (nextPos < canvas.height) {
+              ctx.fillStyle = '#00e5ff';
+              ctx.fillRect(0, nextPos, canvas.width, 3);
+              scanPos = nextPos;
+            } else {
+              isScanning = false;
+            }
+          }
+        } else if (scanPos === 0) {
+          ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        }
+      }
+      requestAnimationFrame(draw);
+    }
+    draw();
+  </script>
+</body>
+
+</html>
