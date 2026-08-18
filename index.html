@@ -3,6 +3,8 @@
 
 <head>
   <meta charset="UTF-8">
+  <!-- スマホの画面幅に合わせ、拡大縮小を禁止する設定を追加 -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Time Warp Scan</title>
   <style>
     body {
@@ -13,16 +15,21 @@
       color: #fff;
       font-family: sans-serif;
       margin: 0;
-      padding: 20px;
+      padding: 10px; /* スマホ向けに余白を少し減らしました */
     }
 
     video {
-      display: none;
+      position: absolute;
+      width: 0;
+      height: 0;
+      visibility: hidden;
     }
 
     canvas {
       border: 2px solid #555;
-      max-width: 90vw;
+      width: 100%; /* スマホの横幅いっぱいに広げます */
+      max-width: 640px; /* PCなどでは最大640pxまでに制限します */
+      height: auto; /* 縦横の比率を保ちます */
       background: #000;
     }
 
@@ -56,7 +63,6 @@
       gap: 10px;
     }
 
-    /* アルバム（ダイアログ）のスタイル */
     dialog.album-modal {
       width: 90vw;
       max-width: 640px;
@@ -94,7 +100,7 @@
 
     .album-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+      grid-template-columns: repeat(auto-fill, minmax(80px, 1fr)); /* スマホでも見やすいサイズに変更 */
       gap: 10px;
     }
 
@@ -133,10 +139,10 @@
     <button id="openAlbumBtn">アルバム</button>
   </div>
 
-  <video id="video" playsinline autoplay></video>
+  <video id="video" playsinline autoplay muted></video>
+  <!-- 解像度は640x480のまま、見た目だけCSSでスマホに合わせます -->
   <canvas id="canvas" width="640" height="480"></canvas>
 
-  <!-- アルバム表示用ダイアログ -->
   <dialog id="albumModal" class="album-modal">
     <div class="album-header">
       <div class="album-title">ほぞんしたアルバム</div>
@@ -167,18 +173,19 @@
     let scanDirection = 'horizontal';
     let speed = parseInt(speedSlider.value, 10);
 
-    // カメラ起動
     navigator.mediaDevices.getUserMedia({
       video: {
-        facingMode: "user", // インカメラを優先（外カメラにしたい場合は "environment"）
+        facingMode: "user",
         width: { ideal: 640 },
         height: { ideal: 480 }
       },
       audio: false
     })
-      .then(stream => { video.srcObject = stream; })
+      .then(stream => { 
+        video.srcObject = stream; 
+        video.play();
+      })
       .catch(err => {
-        // エラーの詳細を表示するように変更
         alert("カメラの起動に失敗しました。\n理由: " + err.name + "\nメッセージ: " + err.message);
       });
 
@@ -199,7 +206,6 @@
       isScanning = true;
     });
 
-    // JPEG保存 ＆ アルバム追加
     saveBtn.addEventListener('click', () => {
       const jpegDataUrl = canvas.toDataURL('image/jpeg', 0.9);
       const filename = `timewarp_${Date.now()}.jpg`;
@@ -212,7 +218,6 @@
       addPhotoToAlbum(jpegDataUrl, filename);
     });
 
-    // アルバムの開閉
     openAlbumBtn.addEventListener('click', () => {
       albumModal.showModal();
     });
