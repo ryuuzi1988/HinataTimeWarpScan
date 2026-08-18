@@ -10,8 +10,9 @@
       display: flex;
       flex-direction: column;
       align-items: center;
-      background: #222;
-      color: #fff;
+      background: #fefdfd;
+      color: #ff8c00;
+      text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
       font-family: sans-serif;
       margin: 0;
       padding: 10px;
@@ -42,30 +43,34 @@
     }
 
     button {
-      padding: 10px 16px;
+      padding: 12px 20px;
       font-size: 16px;
       cursor: pointer;
-      border-radius: 6px;
+      border-radius: 8px;
       border: none;
-      background: #00e5ff;
-      color: #000;
+      background: #ff8c00;
+      color: #ffffff;
       font-weight: bold;
+      box-shadow: 0 4px 0 #a15901;
+      transition: all 0.1s;
     }
 
     button:active {
-      opacity: 0.8;
+      transform: translateY(4px);
+      box-shadow: 0 0 0 #0077b6;
     }
 
     .slider-container {
       display: flex;
       align-items: center;
       gap: 10px;
+      font-weight: bold;
     }
 
     #toast {
       visibility: hidden;
       min-width: 250px;
-      background-color: #00e5ff;
+      background-color: #ffb703;
       color: #000;
       text-align: center;
       border-radius: 30px;
@@ -114,6 +119,10 @@
     const canvas = document.getElementById('canvas');
     const ctx = canvas.getContext('2d');
 
+    // 映像を左右反転させるための裏側キャンバスを作成
+    const offCanvas = document.createElement('canvas');
+    const offCtx = offCanvas.getContext('2d');
+
     const startHBtn = document.getElementById('startHorizontalBtn');
     const startVBtn = document.getElementById('startVerticalBtn');
     const saveBtn = document.getElementById('saveBtn');
@@ -150,8 +159,11 @@
         video.srcObject = stream; 
         
         video.addEventListener('loadedmetadata', () => {
+          // メインキャンバスと裏側キャンバスの両方のサイズを合わせる
           canvas.width = video.videoWidth;
           canvas.height = video.videoHeight;
+          offCanvas.width = video.videoWidth;
+          offCanvas.height = video.videoHeight;
           video.play();
         });
       })
@@ -203,15 +215,26 @@
 
     function draw() {
       if (video.readyState === video.HAVE_ENOUGH_DATA) {
+        
+        // 1. 裏側キャンバスに映像を左右反転して描画する
+        offCtx.save();
+        offCtx.translate(offCanvas.width, 0);
+        offCtx.scale(-1, 1);
+        offCtx.drawImage(video, 0, 0, offCanvas.width, offCanvas.height);
+        offCtx.restore();
+
+        // 2. これ以降は video ではなく反転済みの offCanvas を使用する
+        const src = offCanvas;
+
         if (isScanning) {
           if (scanDirection === 'horizontal') {
-            ctx.drawImage(video, scanPos, 0, speed, canvas.height, scanPos, 0, speed, canvas.height);
+            ctx.drawImage(src, scanPos, 0, speed, canvas.height, scanPos, 0, speed, canvas.height);
 
             const nextPos = scanPos + speed;
             const remaining = canvas.width - nextPos;
 
             if (remaining > 0) {
-              ctx.drawImage(video, nextPos, 0, remaining, canvas.height, nextPos, 0, remaining, canvas.height);
+              ctx.drawImage(src, nextPos, 0, remaining, canvas.height, nextPos, 0, remaining, canvas.height);
             }
 
             if (nextPos < canvas.width) {
@@ -222,13 +245,13 @@
               isScanning = false;
             }
           } else {
-            ctx.drawImage(video, 0, scanPos, canvas.width, speed, 0, scanPos, canvas.width, speed);
+            ctx.drawImage(src, 0, scanPos, canvas.width, speed, 0, scanPos, canvas.width, speed);
 
             const nextPos = scanPos + speed;
             const remaining = canvas.height - nextPos;
 
             if (remaining > 0) {
-              ctx.drawImage(video, 0, nextPos, canvas.width, remaining, 0, nextPos, canvas.width, remaining);
+              ctx.drawImage(src, 0, nextPos, canvas.width, remaining, 0, nextPos, canvas.width, remaining);
             }
 
             if (nextPos < canvas.height) {
@@ -240,7 +263,7 @@
             }
           }
         } else if (scanPos === 0) {
-          ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+          ctx.drawImage(src, 0, 0, canvas.width, canvas.height);
         }
       }
       requestAnimationFrame(draw);
