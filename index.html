@@ -6,14 +6,26 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>パーフェクトひなた</title>
   <link rel="icon" type="image/png" href="favicon.png">
-  <title>Time Warp Scan</title>
   <style>
+    /* =========================================
+       ここで色を一括管理します（CSS変数）
+       ========================================= */
+    :root {
+
+      --main-color: #ff8c00;       /* ボタンや文字のメイン色（赤） */
+      --btn-color: #dd0505;       /* ボタンや文字のメイン色（赤） */
+      --shadow-color: #950202;     /* ボタンの影の色（濃い赤） */
+      --bg-color: #fefdfd;         /* 背景色 */
+      --toast-bg: #ffb703;         /* 通知の背景色（黄色） */
+      --toast-text: #000000;       /* 通知の文字色 */
+    }
+
     body {
       display: flex;
       flex-direction: column;
       align-items: center;
-      background: #fefdfd;
-      color: #ff8c00;
+      background: var(--bg-color);
+      color: var(--main-color);
       text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
       font-family: sans-serif;
       margin: 0;
@@ -50,16 +62,16 @@
       cursor: pointer;
       border-radius: 8px;
       border: none;
-      background: #ff8c00;
+      background: var(--btn-color);
       color: #ffffff;
       font-weight: bold;
-      box-shadow: 0 4px 0 #a15901;
+      box-shadow: 0 4px 0 var(--shadow-color);
       transition: all 0.1s;
     }
 
     button:active {
       transform: translateY(4px);
-      box-shadow: 0 0 0 #a15901;
+      box-shadow: 0 0 0 var(--shadow-color);
     }
 
     .slider-container {
@@ -72,8 +84,8 @@
     #toast {
       visibility: hidden;
       min-width: 250px;
-      background-color: #ffb703;
-      color: #000;
+      background-color: var(--toast-bg);
+      color: var(--toast-text);
       text-align: center;
       border-radius: 30px;
       padding: 12px 20px;
@@ -117,11 +129,18 @@
   <div id="toast">ほぞんしたよ！</div>
 
   <script>
+    // =========================================
+    // ここで設定を一括管理します
+    // =========================================
+    const CONFIG = {
+      scanLineColor: '#00e5ff', // スキャン線の色（青）
+      scanLineWidth: 3          // スキャン線の太さ（px）
+    };
+
     const video = document.getElementById('video');
     const canvas = document.getElementById('canvas');
     const ctx = canvas.getContext('2d');
 
-    // 映像を左右反転させるための裏側キャンバスを作成
     const offCanvas = document.createElement('canvas');
     const offCtx = offCanvas.getContext('2d');
 
@@ -161,7 +180,6 @@
         video.srcObject = stream; 
         
         video.addEventListener('loadedmetadata', () => {
-          // メインキャンバスと裏側キャンバスの両方のサイズを合わせる
           canvas.width = video.videoWidth;
           canvas.height = video.videoHeight;
           offCanvas.width = video.videoWidth;
@@ -218,14 +236,12 @@
     function draw() {
       if (video.readyState === video.HAVE_ENOUGH_DATA) {
         
-        // 1. 裏側キャンバスに映像を左右反転して描画する
         offCtx.save();
         offCtx.translate(offCanvas.width, 0);
         offCtx.scale(-1, 1);
         offCtx.drawImage(video, 0, 0, offCanvas.width, offCanvas.height);
         offCtx.restore();
 
-        // 2. これ以降は video ではなく反転済みの offCanvas を使用する
         const src = offCanvas;
 
         if (isScanning) {
@@ -240,8 +256,8 @@
             }
 
             if (nextPos < canvas.width) {
-              ctx.fillStyle = '#00e5ff';
-              ctx.fillRect(nextPos, 0, 3, canvas.height);
+              ctx.fillStyle = CONFIG.scanLineColor;
+              ctx.fillRect(nextPos, 0, CONFIG.scanLineWidth, canvas.height);
               scanPos = nextPos;
             } else {
               isScanning = false;
@@ -257,8 +273,8 @@
             }
 
             if (nextPos < canvas.height) {
-              ctx.fillStyle = '#00e5ff';
-              ctx.fillRect(0, nextPos, canvas.width, 3);
+              ctx.fillStyle = CONFIG.scanLineColor;
+              ctx.fillRect(0, nextPos, canvas.width, CONFIG.scanLineWidth);
               scanPos = nextPos;
             } else {
               isScanning = false;
