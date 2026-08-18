@@ -218,9 +218,9 @@
       },
       audio: false
     })
-      .then(stream => { 
-        video.srcObject = stream; 
-        
+      .then(stream => {
+        video.srcObject = stream;
+
         video.addEventListener('loadedmetadata', () => {
           canvas.width = video.videoWidth;
           canvas.height = video.videoHeight;
@@ -264,7 +264,7 @@
               title: 'エフェクト画像'
             }).then(() => {
               showToast("保存処理が完了しました！");
-            }).catch((err) => {});
+            }).catch((err) => { });
           }
         }, 'image/jpeg', 0.9);
       } else {
@@ -277,10 +277,7 @@
       }
     });
 
-    openAlbumBtn.addEventListener('click', () => {
-      albumModal.showModal();
-    });
-
+    openAlbumBtn
     closeAlbumBtn.addEventListener('click', () => {
       albumModal.close();
     });
@@ -298,7 +295,7 @@
           canvas.toBlob((blob) => {
             const file = new File([blob], filename, { type: 'image/jpeg' });
             if (navigator.canShare && navigator.canShare({ files: [file] })) {
-              navigator.share({ files: [file] }).catch(() => {});
+              navigator.share({ files: [file] }).catch(() => { });
             }
           }, 'image/jpeg', 0.9);
         } else {
