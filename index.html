@@ -15,7 +15,8 @@
       color: #fff;
       font-family: sans-serif;
       margin: 0;
-      padding: 10px; /* スマホ向けに余白を少し減らしました */
+      padding: 10px;
+      /* スマホ向けに余白を少し減らしました */
     }
 
     video {
@@ -27,9 +28,12 @@
 
     canvas {
       border: 2px solid #555;
-      width: 100%; /* スマホの横幅いっぱいに広げます */
-      max-width: 640px; /* PCなどでは最大640pxまでに制限します */
-      height: auto; /* 縦横の比率を保ちます */
+      width: 100%;
+      /* スマホの横幅いっぱいに広げます */
+      max-width: 640px;
+      /* PCなどでは最大640pxまでに制限します */
+      height: auto;
+      /* 縦横の比率を保ちます */
       background: #000;
     }
 
@@ -100,7 +104,8 @@
 
     .album-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(80px, 1fr)); /* スマホでも見やすいサイズに変更 */
+      grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+      /* スマホでも見やすいサイズに変更 */
       gap: 10px;
     }
 
@@ -173,6 +178,7 @@
     let scanDirection = 'horizontal';
     let speed = parseInt(speedSlider.value, 10);
 
+    // カメラ起動
     navigator.mediaDevices.getUserMedia({
       video: {
         facingMode: "user",
@@ -181,9 +187,15 @@
       },
       audio: false
     })
-      .then(stream => { 
-        video.srcObject = stream; 
-        video.play();
+      .then(stream => {
+        video.srcObject = stream;
+
+        // 映像のメタデータが読み込まれたらサイズを同期する
+        video.addEventListener('loadedmetadata', () => {
+          canvas.width = video.videoWidth;
+          canvas.height = video.videoHeight;
+          video.play(); // ここで再生を開始する
+        });
       })
       .catch(err => {
         alert("カメラの起動に失敗しました。\n理由: " + err.name + "\nメッセージ: " + err.message);
