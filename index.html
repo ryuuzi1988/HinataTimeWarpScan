@@ -120,7 +120,6 @@
       cursor: pointer;
     }
 
-    /* ポップアップ（トースト通知）のスタイル */
     #toast {
       visibility: hidden;
       min-width: 250px;
@@ -175,7 +174,6 @@
     <div class="album-grid" id="albumGrid"></div>
   </dialog>
 
-  <!-- 通知用の要素 -->
   <div id="toast">処理が完了しました</div>
 
   <script>
@@ -201,7 +199,9 @@
     let scanDirection = 'horizontal';
     let speed = parseInt(speedSlider.value, 10);
 
-    // ポップアップを表示する関数
+    // iOS端末（iPad, iPhone）かどうかを判定します。
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+
     function showToast(message) {
       toast.textContent = message;
       toast.classList.add('show');
@@ -252,32 +252,29 @@
       const jpegDataUrl = canvas.toDataURL('image/jpeg', 0.9);
       const filename = `timewarp_${Date.now()}.jpg`;
 
-      // まずアプリ内のアルバムに追加
       addPhotoToAlbum(jpegDataUrl, filename);
 
-      // 画像をファイル化して共有メニュー（保存）を開く
-      canvas.toBlob((blob) => {
-        const file = new File([blob], filename, { type: 'image/jpeg' });
-
-        // iPad/iPhoneなど、共有メニューが使える場合
-        if (navigator.canShare && navigator.canShare({ files: [file] })) {
-          navigator.share({
-            files: [file],
-            title: 'エフェクト画像'
-          }).then(() => {
-            showToast("保存処理が完了しました！");
-          }).catch((err) => {
-            // ユーザーがキャンセルした場合は何もしない
-          });
-        } else {
-          // PCなどの場合（直接ダウンロード）
-          const link = document.createElement('a');
-          link.download = filename;
-          link.href = jpegDataUrl;
-          link.click();
-          showToast("画像を保存しました！");
-        }
-      }, 'image/jpeg', 0.9);
+      if (isIOS) {
+        // iOSの場合は共有メニューを開きます。
+        canvas.toBlob((blob) => {
+          const file = new File([blob], filename, { type: 'image/jpeg' });
+          if (navigator.canShare && navigator.canShare({ files: [file] })) {
+            navigator.share({
+              files: [file],
+              title: 'エフェクト画像'
+            }).then(() => {
+              showToast("保存処理が完了しました！");
+            }).catch((err) => {});
+          }
+        }, 'image/jpeg', 0.9);
+      } else {
+        // それ以外の端末は直接ダウンロードさせます。
+        const link = document.createElement('a');
+        link.download = filename;
+        link.href = jpegDataUrl;
+        link.click();
+        showToast("画像を保存しました！");
+      }
     });
 
     openAlbumBtn.addEventListener('click', () => {
@@ -296,20 +293,21 @@
       img.src = dataUrl;
       img.title = 'クリックして再ダウンロード';
 
-      // アルバムの画像をタップした時も、同じように共有メニューを開く
       img.addEventListener('click', () => {
-        canvas.toBlob((blob) => {
-          const file = new File([blob], filename, { type: 'image/jpeg' });
-          if (navigator.canShare && navigator.canShare({ files: [file] })) {
-            navigator.share({ files: [file] }).catch(() => {});
-          } else {
-            const link = document.createElement('a');
-            link.download = filename;
-            link.href = dataUrl;
-            link.click();
-            showToast("画像を保存しました！");
-          }
-        }, 'image/jpeg', 0.9);
+        if (isIOS) {
+          canvas.toBlob((blob) => {
+            const file = new File([blob], filename, { type: 'image/jpeg' });
+            if (navigator.canShare && navigator.canShare({ files: [file] })) {
+              navigator.share({ files: [file] }).catch(() => {});
+            }
+          }, 'image/jpeg', 0.9);
+        } else {
+          const link = document.createElement('a');
+          link.download = filename;
+          link.href = dataUrl;
+          link.click();
+          showToast("画像を保存しました！");
+        }
       });
 
       albumGrid.insertBefore(item, albumGrid.firstChild);
