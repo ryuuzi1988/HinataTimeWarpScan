@@ -277,6 +277,7 @@
     saveBtn.addEventListener('click', () => {
       const jpegDataUrl = canvas.toDataURL('image/jpeg', 0.9);
       const filename = `timewarp_${Date.now()}.jpg`;
+      const popMessage = "ほぞんしたよ！しゃしんアプリからみてね!";
 
       if (isIOS) {
         canvas.toBlob((blob) => {
@@ -286,7 +287,7 @@
               files: [file],
               title: 'エフェクト画像'
             }).then(() => {
-              showToast("ほぞんしたよ！");
+              showToast(popMessage);
             }).catch((err) => { });
           }
         }, 'image/jpeg', 0.9);
@@ -295,7 +296,7 @@
         link.download = filename;
         link.href = jpegDataUrl;
         link.click();
-        showToast("ほぞんしたよ！");
+        showToast(popMessage);
       }
     });
 
