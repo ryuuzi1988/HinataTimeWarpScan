@@ -11,13 +11,31 @@
        ここで色を一括管理します（CSS変数）
        ========================================= */
     :root {
+      --main-color: #ff8c00;
+      /* 文字のメイン色（オレンジ） */
+      --btn-color: #dd0505;
+      /* ボタンの色（赤） */
+      --shadow-color: #950202;
+      /* ボタンの影の色（濃い赤） */
+      --bg-color: #fefdfd;
+      /* 背景色 */
+      --panel-bg-color: rgba(255, 255, 255, 0.8); /* 操作ブロックの背景色（白・少し透ける） */
+      --toast-bg: #ffb703;
+      /* 通知の背景色（黄色） */
+      --toast-text: #000000;
+      /* 通知の文字色 */
 
-      --main-color: #ff8c00;       /* ボタンや文字のメイン色（赤） */
-      --btn-color: #dd0505;       /* ボタンや文字のメイン色（赤） */
-      --shadow-color: #950202;     /* ボタンの影の色（濃い赤） */
-      --bg-color: #fefdfd;         /* 背景色 */
-      --toast-bg: #ffb703;         /* 通知の背景色（黄色） */
-      --toast-text: #000000;       /* 通知の文字色 */
+      /* スライダーの色設定（黒） */
+      --slider-color: #333333;
+
+      /* プレビュー画面の枠線の設定 */
+      --canvas-border-color: #333333;
+      --canvas-border-width: 3px;
+
+      /* 背景アイコンの設定 */
+      --bg-icon-size: 200px;
+      --bg-icon-opacity: 0.45;
+      --bg-icon-rotate: 0deg;
     }
 
     body {
@@ -30,6 +48,26 @@
       font-family: sans-serif;
       margin: 0;
       padding: 10px;
+      min-height: 100vh;
+      position: relative;
+      z-index: 0;
+    }
+
+    /* 背景にfaviconを斜めに散りばめる設定 */
+    body::before {
+      content: "";
+      position: fixed;
+      top: -20vh;
+      left: -20vw;
+      width: 140vw;
+      height: 140vh;
+      background-image: url('favicon.png');
+      background-size: var(--bg-icon-size);
+      background-repeat: repeat;
+      opacity: var(--bg-icon-opacity);
+      transform: rotate(var(--bg-icon-rotate));
+      z-index: -1;
+      pointer-events: none;
     }
 
     video {
@@ -39,16 +77,36 @@
       visibility: hidden;
     }
 
+    /* 操作系をまとめるブロック（背景色をつけて見やすくする） */
+    .ui-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      background: var(--panel-bg-color);
+      padding: 15px 20px;
+      border-radius: 12px;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+      margin-bottom: 15px;
+      width: 100%;
+      max-width: 640px;
+      box-sizing: border-box;
+      position: relative;
+      z-index: 1;
+    }
+
     canvas {
-      border: 2px solid #555;
+      border: var(--canvas-border-width) solid var(--canvas-border-color);
+      border-radius: 8px;
       width: 100%;
       max-width: 640px;
       height: auto;
       background: #000;
+      position: relative;
+      z-index: 1;
     }
 
     .controls {
-      margin: 10px 0;
+      margin: 8px 0;
       display: flex;
       gap: 10px;
       flex-wrap: wrap;
@@ -81,6 +139,11 @@
       font-weight: bold;
     }
 
+    /* スライダー（レンジ入力）の色を黒に変更 */
+    input[type="range"] {
+      accent-color: var(--slider-color);
+    }
+
     #toast {
       visibility: hidden;
       min-width: 250px;
@@ -109,18 +172,21 @@
 </head>
 
 <body>
-  <h2>ひなた せんよう エフェクト</h2>
+  <!-- 操作系をまとめるブロック -->
+  <div class="ui-container">
+    <h2>ひなた せんよう エフェクト</h2>
 
-  <div class="controls slider-container">
-    <label for="speedSlider">はやさ:</label>
-    <input type="range" id="speedSlider" min="1" max="10" value="3">
-    <span id="speedValue">3</span>
-  </div>
+    <div class="controls slider-container">
+      <label for="speedSlider">はやさ:</label>
+      <input type="range" id="speedSlider" min="1" max="10" value="3">
+      <span id="speedValue">3</span>
+    </div>
 
-  <div class="controls">
-    <button id="startHorizontalBtn">よこにスキャン</button>
-    <button id="startVerticalBtn">たてにスキャン</button>
-    <button id="saveBtn">ほぞん</button>
+    <div class="controls">
+      <button id="startHorizontalBtn">よこにスキャン</button>
+      <button id="startVerticalBtn">たてにスキャン</button>
+      <button id="saveBtn">ほぞん</button>
+    </div>
   </div>
 
   <video id="video" playsinline autoplay muted></video>
@@ -176,9 +242,9 @@
       },
       audio: false
     })
-      .then(stream => { 
-        video.srcObject = stream; 
-        
+      .then(stream => {
+        video.srcObject = stream;
+
         video.addEventListener('loadedmetadata', () => {
           canvas.width = video.videoWidth;
           canvas.height = video.videoHeight;
@@ -221,7 +287,7 @@
               title: 'エフェクト画像'
             }).then(() => {
               showToast("ほぞんしたよ！");
-            }).catch((err) => {});
+            }).catch((err) => { });
           }
         }, 'image/jpeg', 0.9);
       } else {
@@ -235,7 +301,7 @@
 
     function draw() {
       if (video.readyState === video.HAVE_ENOUGH_DATA) {
-        
+
         offCtx.save();
         offCtx.translate(offCanvas.width, 0);
         offCtx.scale(-1, 1);
