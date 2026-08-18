@@ -4,6 +4,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>パーフェクトひなた</title>
+  <link rel="icon" type="image/png" href="favicon.png">
   <title>Time Warp Scan</title>
   <style>
     body {
@@ -57,7 +59,7 @@
 
     button:active {
       transform: translateY(4px);
-      box-shadow: 0 0 0 #0077b6;
+      box-shadow: 0 0 0 #a15901;
     }
 
     .slider-container {
@@ -200,7 +202,7 @@
               files: [file],
               title: 'エフェクト画像'
             }).then(() => {
-              showToast("保存処理が完了しました！");
+              showToast("ほぞんしたよ！");
             }).catch((err) => {});
           }
         }, 'image/jpeg', 0.9);
@@ -209,7 +211,7 @@
         link.download = filename;
         link.href = jpegDataUrl;
         link.click();
-        showToast("画像を保存しました！");
+        showToast("ほぞんしたよ！");
       }
     });
 
