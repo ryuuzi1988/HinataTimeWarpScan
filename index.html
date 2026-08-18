@@ -3,7 +3,6 @@
 
 <head>
   <meta charset="UTF-8">
-  <!-- スマホの画面幅に合わせ、拡大縮小を禁止する設定を追加 -->
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Time Warp Scan</title>
   <style>
@@ -16,7 +15,6 @@
       font-family: sans-serif;
       margin: 0;
       padding: 10px;
-      /* スマホ向けに余白を少し減らしました */
     }
 
     video {
@@ -29,11 +27,8 @@
     canvas {
       border: 2px solid #555;
       width: 100%;
-      /* スマホの横幅いっぱいに広げます */
       max-width: 640px;
-      /* PCなどでは最大640pxまでに制限します */
       height: auto;
-      /* 縦横の比率を保ちます */
       background: #000;
     }
 
@@ -105,7 +100,6 @@
     .album-grid {
       display: grid;
       grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
-      /* スマホでも見やすいサイズに変更 */
       gap: 10px;
     }
 
@@ -124,6 +118,32 @@
       object-fit: cover;
       display: block;
       cursor: pointer;
+    }
+
+    /* ポップアップ（トースト通知）のスタイル */
+    #toast {
+      visibility: hidden;
+      min-width: 250px;
+      background-color: #00e5ff;
+      color: #000;
+      text-align: center;
+      border-radius: 30px;
+      padding: 12px 20px;
+      position: fixed;
+      z-index: 1000;
+      left: 50%;
+      bottom: 30px;
+      transform: translateX(-50%);
+      font-size: 16px;
+      font-weight: bold;
+      opacity: 0;
+      transition: opacity 0.3s, bottom 0.3s;
+    }
+
+    #toast.show {
+      visibility: visible;
+      opacity: 1;
+      bottom: 50px;
     }
   </style>
 </head>
@@ -145,8 +165,7 @@
   </div>
 
   <video id="video" playsinline autoplay muted></video>
-  <!-- 解像度は640x480のまま、見た目だけCSSでスマホに合わせます -->
-  <canvas id="canvas" width="640" height="480"></canvas>
+  <canvas id="canvas"></canvas>
 
   <dialog id="albumModal" class="album-modal">
     <div class="album-header">
@@ -155,6 +174,9 @@
     </div>
     <div class="album-grid" id="albumGrid"></div>
   </dialog>
+
+  <!-- 通知用の要素 -->
+  <div id="toast">処理が完了しました</div>
 
   <script>
     const video = document.getElementById('video');
@@ -172,13 +194,22 @@
 
     const albumModal = document.getElementById('albumModal');
     const albumGrid = document.getElementById('albumGrid');
+    const toast = document.getElementById('toast');
 
     let scanPos = 0;
     let isScanning = false;
     let scanDirection = 'horizontal';
     let speed = parseInt(speedSlider.value, 10);
 
-    // カメラ起動
+    // ポップアップを表示する関数
+    function showToast(message) {
+      toast.textContent = message;
+      toast.classList.add('show');
+      setTimeout(() => {
+        toast.classList.remove('show');
+      }, 3000);
+    }
+
     navigator.mediaDevices.getUserMedia({
       video: {
         facingMode: "user",
@@ -187,14 +218,13 @@
       },
       audio: false
     })
-      .then(stream => {
-        video.srcObject = stream;
-
-        // 映像のメタデータが読み込まれたらサイズを同期する
+      .then(stream => { 
+        video.srcObject = stream; 
+        
         video.addEventListener('loadedmetadata', () => {
           canvas.width = video.videoWidth;
           canvas.height = video.videoHeight;
-          video.play(); // ここで再生を開始する
+          video.play();
         });
       })
       .catch(err => {
@@ -222,12 +252,32 @@
       const jpegDataUrl = canvas.toDataURL('image/jpeg', 0.9);
       const filename = `timewarp_${Date.now()}.jpg`;
 
-      const link = document.createElement('a');
-      link.download = filename;
-      link.href = jpegDataUrl;
-      link.click();
-
+      // まずアプリ内のアルバムに追加
       addPhotoToAlbum(jpegDataUrl, filename);
+
+      // 画像をファイル化して共有メニュー（保存）を開く
+      canvas.toBlob((blob) => {
+        const file = new File([blob], filename, { type: 'image/jpeg' });
+
+        // iPad/iPhoneなど、共有メニューが使える場合
+        if (navigator.canShare && navigator.canShare({ files: [file] })) {
+          navigator.share({
+            files: [file],
+            title: 'エフェクト画像'
+          }).then(() => {
+            showToast("保存処理が完了しました！");
+          }).catch((err) => {
+            // ユーザーがキャンセルした場合は何もしない
+          });
+        } else {
+          // PCなどの場合（直接ダウンロード）
+          const link = document.createElement('a');
+          link.download = filename;
+          link.href = jpegDataUrl;
+          link.click();
+          showToast("画像を保存しました！");
+        }
+      }, 'image/jpeg', 0.9);
     });
 
     openAlbumBtn.addEventListener('click', () => {
@@ -246,11 +296,20 @@
       img.src = dataUrl;
       img.title = 'クリックして再ダウンロード';
 
+      // アルバムの画像をタップした時も、同じように共有メニューを開く
       img.addEventListener('click', () => {
-        const link = document.createElement('a');
-        link.download = filename;
-        link.href = dataUrl;
-        link.click();
+        canvas.toBlob((blob) => {
+          const file = new File([blob], filename, { type: 'image/jpeg' });
+          if (navigator.canShare && navigator.canShare({ files: [file] })) {
+            navigator.share({ files: [file] }).catch(() => {});
+          } else {
+            const link = document.createElement('a');
+            link.download = filename;
+            link.href = dataUrl;
+            link.click();
+            showToast("画像を保存しました！");
+          }
+        }, 'image/jpeg', 0.9);
       });
 
       albumGrid.insertBefore(item, albumGrid.firstChild);
